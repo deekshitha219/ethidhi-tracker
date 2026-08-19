@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import "./App.css";
 
-const API = "http://ethidhi-tracker.onrender/api/companies";
+const API = "https://ethidhi-tracker.onrender.com/api/companies";
 
 const emptyForm = {
   companyName: "",
