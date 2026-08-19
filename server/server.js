@@ -236,6 +236,7 @@ app.delete("/api/companies/:id", (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Backend server running on port ${PORT}`);
+app.listen(PORT,() => {
+  console.log(`Backend server running on
+port ${PORT}`);
 });
