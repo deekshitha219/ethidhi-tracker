@@ -1,0 +1,11 @@
+html {
+  min-width: 320px;
+}
+
+body {
+  min-width: 320px;
+}
+
+#root {
+  min-height: 100vh;
+}
