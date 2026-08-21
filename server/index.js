@@ -1,152 +1,179 @@
 const express = require("express");
 const cors = require("cors");
-const sqlite3 = require("sqlite3").verbose();
+const fs = require("fs");
+const path = require("path");
 
 const app = express();
+
 const PORT = process.env.PORT || 5000;
 
+const DATA_FILE = path.join(__dirname, "companies.json");
 
 app.use(cors());
 app.use(express.json());
 
-const db = new sqlite3.Database("./etidhi.db");
+function readCompanies() {
+  try {
+    if (!fs.existsSync(DATA_FILE)) {
+      fs.writeFileSync(DATA_FILE, "[]", "utf8");
+    }
 
-db.serialize(() => {
-  db.run(`
-    CREATE TABLE IF NOT EXISTS companies (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      companyName TEXT NOT NULL,
-      partner TEXT,
-      dealValue INTEGER DEFAULT 0,
-      accountOwner TEXT,
-      teamMembers TEXT,
-      clientPOC TEXT,
-      email TEXT,
-      phone TEXT,
-      stage TEXT DEFAULT 'Pipeline',
-      notes TEXT
-    )
-  `);
+    const data = fs.readFileSync(DATA_FILE, "utf8");
 
-  db.get("SELECT COUNT(*) AS count FROM companies", (err, row) => {
-    if (err || row.count > 0) return;
+    return JSON.parse(data || "[]");
+  } catch (error) {
+    console.error("Error reading companies:", error);
+    return [];
+  }
+}
 
-    const seed = [
-      ["Cognizant", "KOGO", 5000000, "Raj", "Rahul Sharma", "Arun", "", "8474748884", "Pipeline", "Initial discussion completed."],
-      ["TCS", "KOGO", 70000, "Srinivas", "Rahul", "Arun Kumar", "", "9866666388", "Discussion", "Client POC follow-up pending."],
-      ["XYZ Solutions", "Contineu", 250000, "Priya", "Anil", "Kiran", "", "9876543210", "Discussion", "Proposal preparation in progress."],
-      ["ABC Technologies", "KOGO", 500000, "Rahul", "Deekshitha", "Arun Kumar", "", "9000000000", "Pipeline", "Demo to be scheduled."]
-    ];
-
-    const stmt = db.prepare(`
-      INSERT INTO companies
-      (companyName, partner, dealValue, accountOwner, teamMembers, clientPOC, email, phone, stage, notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    seed.forEach((item) => stmt.run(item));
-    stmt.finalize();
-  });
-});
+function saveCompanies(companies) {
+  fs.writeFileSync(
+    DATA_FILE,
+    JSON.stringify(companies, null, 2),
+    "utf8"
+  );
+}
 
 app.get("/", (req, res) => {
-  res.json({ service: "EtiDhi Pipeline API", status: "running" });
+  res.json({
+    message: "EtiDhi Company Tracker Backend is running",
+  });
 });
 
 app.get("/api/companies", (req, res) => {
-  db.all("SELECT * FROM companies ORDER BY id DESC", [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
-  });
+  const companies = readCompanies();
+
+  companies.sort((a, b) => Number(b.id) - Number(a.id));
+
+  res.json(companies);
 });
 
 app.post("/api/companies", (req, res) => {
-  const {
-    companyName, partner, dealValue, accountOwner, teamMembers,
-    clientPOC, email, phone, stage, notes
-  } = req.body;
+  try {
+    const companies = readCompanies();
 
-  if (!companyName || !String(companyName).trim()) {
-    return res.status(400).json({ error: "Company name is required" });
-  }
+    const {
+      companyName,
+      partner,
+      stage,
+      signupAmount,
+      accountOwner,
+      teamMember,
+      clientPOC,
+      email,
+      phone,
+      notes,
+    } = req.body;
 
-  const sql = `
-    INSERT INTO companies
-    (companyName, partner, dealValue, accountOwner, teamMembers, clientPOC, email, phone, stage, notes)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `;
-
-  db.run(
-    sql,
-    [
-      companyName.trim(),
-      partner || "Other",
-      Number(dealValue || 0),
-      accountOwner || "",
-      teamMembers || "",
-      clientPOC || "",
-      email || "",
-      phone || "",
-      stage || "Pipeline",
-      notes || ""
-    ],
-    function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      db.get("SELECT * FROM companies WHERE id = ?", [this.lastID], (getErr, row) => {
-        if (getErr) return res.status(500).json({ error: getErr.message });
-        res.status(201).json(row);
+    if (!companyName || !String(companyName).trim()) {
+      return res.status(400).json({
+        error: "Company name is required",
       });
     }
-  );
+
+    const newCompany = {
+      id: Date.now(),
+      companyName: String(companyName).trim(),
+      partner: partner || "KOGO",
+      stage: stage || "Pipeline",
+      signupAmount: Number(signupAmount) || 0,
+      accountOwner: accountOwner || "",
+      teamMember: teamMember || "",
+      clientPOC: clientPOC || "",
+      email: email || "",
+      phone: phone || "",
+      notes: notes || "",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    companies.push(newCompany);
+
+    saveCompanies(companies);
+
+    res.status(201).json(newCompany);
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      error: "Unable to create company",
+    });
+  }
 });
 
 app.put("/api/companies/:id", (req, res) => {
-  const {
-    companyName, partner, dealValue, accountOwner, teamMembers,
-    clientPOC, email, phone, stage, notes
-  } = req.body;
+  try {
+    const id = Number(req.params.id);
 
-  const sql = `
-    UPDATE companies SET
-      companyName=?, partner=?, dealValue=?, accountOwner=?, teamMembers=?,
-      clientPOC=?, email=?, phone=?, stage=?, notes=?
-    WHERE id=?
-  `;
+    const companies = readCompanies();
 
-  db.run(
-    sql,
-    [
-      companyName,
-      partner,
-      Number(dealValue || 0),
-      accountOwner || "",
-      teamMembers || "",
-      clientPOC || "",
-      email || "",
-      phone || "",
-      stage || "Pipeline",
-      notes || "",
-      req.params.id
-    ],
-    function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      if (!this.changes) return res.status(404).json({ error: "Company not found" });
-      db.get("SELECT * FROM companies WHERE id = ?", [req.params.id], (getErr, row) => {
-        if (getErr) return res.status(500).json({ error: getErr.message });
-        res.json(row);
+    const index = companies.findIndex(
+      (company) => Number(company.id) === id
+    );
+
+    if (index === -1) {
+      return res.status(404).json({
+        error: "Company not found",
       });
     }
-  );
+
+    const oldCompany = companies[index];
+
+    companies[index] = {
+      ...oldCompany,
+      ...req.body,
+      id: oldCompany.id,
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (companies[index].signupAmount !== undefined) {
+      companies[index].signupAmount =
+        Number(companies[index].signupAmount) || 0;
+    }
+
+    saveCompanies(companies);
+
+    res.json(companies[index]);
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      error: "Unable to update company",
+    });
+  }
 });
 
 app.delete("/api/companies/:id", (req, res) => {
-  db.run("DELETE FROM companies WHERE id = ?", [req.params.id], function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    if (!this.changes) return res.status(404).json({ error: "Company not found" });
-    res.json({ message: "Company deleted" });
-  });
+  try {
+    const id = Number(req.params.id);
+
+    const companies = readCompanies();
+
+    const filteredCompanies = companies.filter(
+      (company) => Number(company.id) !== id
+    );
+
+    if (filteredCompanies.length === companies.length) {
+      return res.status(404).json({
+        error: "Company not found",
+      });
+    }
+
+    saveCompanies(filteredCompanies);
+
+    res.json({
+      message: "Company deleted successfully",
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      error: "Unable to delete company",
+    });
+  }
 });
 
 app.listen(PORT, () => {
-  console.log(`EtiDhi backend running on http://localhost:${PORT}`);
+  console.log(`Backend server running on port ${PORT}`);
 });
