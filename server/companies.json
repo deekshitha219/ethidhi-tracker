@@ -1,0 +1,47 @@
+[
+  {
+    "id": 2,
+    "companyName": "XYZ Solutions",
+    "partner": "Contineu",
+    "stage": "Discussion",
+    "signupAmount": 75000,
+    "accountOwner": "Priya",
+    "teamMember": "Anil",
+    "clientPOC": "Ravi",
+    "email": "ravi@example.com",
+    "phone": "9876543211",
+    "notes": "Demo completed",
+    "createdAt": "2026-08-19T10:00:00.000Z",
+    "updatedAt": "2026-08-19T10:00:00.000Z"
+  },
+  {
+    "id": 1,
+    "companyName": "ABC Technologies",
+    "partner": "KOGO",
+    "stage": "Pipeline",
+    "signupAmount": 50000,
+    "accountOwner": "Sukumar",
+    "teamMember": "Rahul",
+    "clientPOC": "Arun Kumar",
+    "email": "arun@example.com",
+    "phone": "9876543210",
+    "notes": "Interested in starting soon",
+    "createdAt": "2026-08-19T09:00:00.000Z",
+    "updatedAt": "2026-08-19T09:00:00.000Z"
+  },
+  {
+    "id": 1787161952050,
+    "companyName": "dhanu",
+    "partner": "KOGO",
+    "stage": "Discussion",
+    "signupAmount": 70000,
+    "accountOwner": "srinu",
+    "teamMember": "rahul",
+    "clientPOC": "arun",
+    "email": "",
+    "phone": "09381718452",
+    "notes": "",
+    "createdAt": "2026-08-19T17:52:32.050Z",
+    "updatedAt": "2026-08-19T17:52:32.050Z"
+  }
+]
